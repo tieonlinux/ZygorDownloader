@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build_publish:
     # The type of runner that the job will run on
     runs-on: windows-latest
     env:
@@ -40,6 +40,12 @@ jobs:
       run: dotnet build --configuration Release
       timeout-minutes: 5
 
+    - name: Lock using Turnstyle
+      timeout-minutes: 15
+      uses: softprops/turnstyle@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Run Release
       env:
         ZY_CODEDECEPTION__LOGIN: ${{ secrets.ZY_CODEDECEPTION__LOGIN }}
@@ -48,5 +54,96 @@ jobs:
             cd ZygorDownloader
             dotnet run --configuration Release
       timeout-minutes: 15
+
+    - name: Setup git
+      id: setup_git
+      timeout-minutes: 3
+      shell: bash
+      run: |
+            set -x
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+
+    - name: export env
+      shell: python
+      run: |
+            import json
+            from pathlib import Path
+
+            retail_zip = next(Path(".").glob("**/ZygorGuidesViewer.zip"))
+            print(f"::set-env name=RETAIL_ZIP::{str(retail_zip.absolute())}")
+            print(f"::set-env name=RETAIL_FOLDER::{str(retail_zip.parent.absolute())}")
+            retail_json = json.loads(next(Path(".").glob("**/ZygorGuidesViewer.json")).read_text())
+            print(f"::set-env name=RETAIL_REVISION::{retail_json['Revision']}")
+
+            classic_zip = next(Path(".").glob("**/ZygorGuidesViewerClassic.zip"))
+            print(f"::set-env name=CLASSIC_ZIP::{str(classic_zip.absolute())}")
+            print(f"::set-env name=CLASSIC_FOLDER::{str(classic_zip.parent.absolute())}")
+            classic_json = json.loads(next(Path(".").glob("**/ZygorGuidesViewerClassic.json")).read_text())
+            print(f"::set-env name=CLASSIC_REVISION::{classic_json['Revision']}")
+
+    - name: Manage Tag
+      timeout-minutes: 1
+      shell: bash
+      run: |
+            set -x
+
+            git ls-remote --exit-code origin "refs/tags/v${RETAIL_REVISION}" &&
+            echo "::set-env name=NEW_RETAIL_RELEASE::" ||
+            echo "::set-env name=NEW_RETAIL_RELEASE::1"
+            git tag --force "v${RETAIL_REVISION}"
+
+            git ls-remote --exit-code origin "refs/tags/v${CLASSIC_REVISION}" &&
+            echo "::set-env name=NEW_CLASSIC_RELEASE::" ||
+            echo "::set-env name=NEW_CLASSIC_RELEASE::1"
+            git tag --force "v${CLASSIC_REVISION}"
+
+            git push -f --tags
+
+    - name: Create artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: zygor_all
+        path: |
+                ${{ env.RETAIL_FOLDER }}
+                ${{ env.CLASSIC_FOLDER }}
+
+    - name: Create retail artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: zygor_retail
+        path: |
+                ${{ env.RETAIL_FOLDER }}/ZygorGuidesViewer.*
+
+    - name: Create classic artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: zygor_classic
+        path: |
+                ${{ env.CLASSIC_FOLDER }}/ZygorGuidesViewerClassic.*
+
+    - name: Create Retail Release
+      id: create_retail_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ env.RETAIL_REVISION }}
+        release_name: retail ${{ env.RETAIL_REVISION }}
+        draft: true
+        prerelease: false
+                  
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_retail_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ${{ env.RETAIL_ZIP }}
+        asset_name: ZygorGuidesViewer.zip
+        asset_content_type: "application/octet-stream"
+            
+
 
     

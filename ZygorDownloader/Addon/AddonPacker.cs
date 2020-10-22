@@ -35,7 +35,7 @@ namespace ZygorDownloader.Addon
             ZipFile.CreateFromDirectory(Path.Join(directory, addonName), target, CompressionLevel.Fastest, true);
             using var f = File.CreateText(Path.Join("export", $"{addonName}.json"));
             f.Write(JsonConvert.SerializeObject(addonInfo, Formatting.Indented));
-            Logger.Information("Updated {0} to {1.Revision}", target, addonInfo);
+            Logger.Information("Updated {0} to {1}", target, addonInfo.Revision);
         }
     }
 }
