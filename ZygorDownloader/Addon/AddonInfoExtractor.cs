@@ -47,7 +47,7 @@ namespace ZygorDownloader.Addon
             catch (Exception e)
             {
                 logger.Error(e, "Unable to extract addon's revision");
-                revision = "Unknown";
+                revision = $"Unknown{downloaderResult.OriginalId}";
             }
             
             return new AddonInfo(revision, tocInfo, downloaderResult.OriginalId, downloaderResult.OriginalDate, downloaderResult.OriginalFileName);
