@@ -63,6 +63,7 @@ jobs:
       shell: bash
       run: |
             set -x
+            git fetch --tags --all
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
 
@@ -138,7 +139,8 @@ jobs:
 
     - name: Delete Draft Releases
       uses: hugo19941994/delete-draft-releases@v0.1.0
-      if: success() && (${{ env.NEW_RETAIL_RELEASE }} || ${{ env.NEW_CLASSIC_RELEASE }})
+      if: success() && env.NEW_RELEASE == '1'
+      continue-on-error: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               
@@ -146,6 +148,7 @@ jobs:
     - name: Create Release
       id: create_release
       if: success() && env.NEW_RELEASE == '1'
+      continue-on-error: true
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
