@@ -66,23 +66,28 @@ jobs:
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
 
-    - name: export env
+    - name: Export env
       shell: python
       run: |
             import json
             from pathlib import Path
+            import os
+
+            def set_env(name: str, value: str):
+              with open(os.getenv("GITHUB_ENV"), 'a', encoding='UTF-8') as f:
+                return print(f"{name}={value}", file=f)
 
             retail_zip = next(Path(".").glob("**/ZygorGuidesViewer.zip"))
-            print(f"::set-env name=RETAIL_ZIP::{str(retail_zip.absolute())}")
-            print(f"::set-env name=RETAIL_FOLDER::{str(retail_zip.parent.absolute())}")
+            set_env("RETAIL_ZIP", str(retail_zip.absolute()))
+            set_env("RETAIL_FOLDER", str(retail_zip.parent.absolute()))
             retail_json = json.loads(next(Path(".").glob("**/ZygorGuidesViewer.json")).read_text())
-            print(f"::set-env name=RETAIL_REVISION::{retail_json['Revision']}")
+            set_env("RETAIL_REVISION", retail_json['Revision'])
 
             classic_zip = next(Path(".").glob("**/ZygorGuidesViewerClassic.zip"))
-            print(f"::set-env name=CLASSIC_ZIP::{str(classic_zip.absolute())}")
-            print(f"::set-env name=CLASSIC_FOLDER::{str(classic_zip.parent.absolute())}")
+            set_env("CLASSIC_ZIP", str(classic_zip.absolute()))
+            set_env("CLASSIC_FOLDER", str(classic_zip.parent.absolute()))
             classic_json = json.loads(next(Path(".").glob("**/ZygorGuidesViewerClassic.json")).read_text())
-            print(f"::set-env name=CLASSIC_REVISION::{classic_json['Revision']}")
+            set_env("CLASSIC_REVISION", classic_json['Revision'])
 
     - name: Manage Tag
       timeout-minutes: 1
@@ -91,14 +96,20 @@ jobs:
             set -x
 
             git ls-remote --exit-code origin "refs/tags/v${RETAIL_REVISION}" &&
-            echo "::set-env name=NEW_RETAIL_RELEASE::" ||
-            echo "::set-env name=NEW_RETAIL_RELEASE::1"
-            git tag --force "v${RETAIL_REVISION}"
+            echo "NEW_RETAIL_RELEASE=" >> $GITHUB_ENV ||
+            echo "NEW_RETAIL_RELEASE=1" >> $GITHUB_ENV
+            git tag "v${RETAIL_REVISION}" || :
 
             git ls-remote --exit-code origin "refs/tags/v${CLASSIC_REVISION}" &&
-            echo "::set-env name=NEW_CLASSIC_RELEASE::" ||
-            echo "::set-env name=NEW_CLASSIC_RELEASE::1"
-            git tag --force "v${CLASSIC_REVISION}"
+            echo "NEW_CLASSIC_RELEASE=" >> $GITHUB_ENV ||
+            echo "NEW_CLASSIC_RELEASE=1" >> $GITHUB_ENV
+            git tag "v${CLASSIC_REVISION}" || :
+
+
+            git ls-remote --exit-code origin "refs/tags/v_r${RETAIL_REVISION}_c${CLASSIC_REVISION}" &&
+            echo "NEW_RELEASE=" >> $GITHUB_ENV ||
+            echo "NEW_RELEASE=1" >> $GITHUB_ENV
+            git tag "v_r${RETAIL_REVISION}_c${CLASSIC_REVISION}" || :
 
             git push -f --tags
 
@@ -132,24 +143,25 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               
 
-    - name: Create Retail Release
-      id: create_retail_release
+    - name: Create Release
+      id: create_release
+      if: success() && ${{ env.NEW_RELEASE }}
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.RETAIL_REVISION }}
-        release_name: retail ${{ env.RETAIL_REVISION }}
-        draft: true && !(${{ env.NEW_RETAIL_RELEASE }} || ${{ env.NEW_CLASSIC_RELEASE }})
+        tag_name: "v_r${{ env.RETAIL_REVISION }}_c${{ env.CLASSIC_REVISION }}"
+        release_name: retail ${{ env.RETAIL_REVISION }} + classic ${{ env.CLASSIC_REVISION }}
         prerelease: false
                   
     - name: Upload retail Asset
       id: upload-retail-asset
+      if: success() && ${{ env.NEW_RELEASE }}
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_retail_release.outputs.upload_url }} 
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
         asset_path: ${{ env.RETAIL_ZIP }}
         asset_name: ZygorGuidesViewer.zip
         asset_content_type: "application/zip"
@@ -157,10 +169,11 @@ jobs:
     - name: Upload classic Asset
       uses: actions/upload-release-asset@v1
       id: upload-classic-asset
+      if: success() && ${{ env.NEW_RELEASE }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_retail_release.outputs.upload_url }} 
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
         asset_path: ${{ env.CLASSIC_ZIP }}
         asset_name: ZygorGuidesViewerClassic.zip
         asset_content_type: "application/zip"
