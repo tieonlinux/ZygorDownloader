@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: windows-latest
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - uses: actions/cache@v2.1.1
+      name: Cache nuget
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: '3.1.x'
+
+    - name: Restore using netcore
+      run: dotnet restore
+      timeout-minutes: 5
+    
+    - name: Build Release
+      run: dotnet build --configuration Release
+      timeout-minutes: 5
+
+    - name: Run Release
+      env:
+        ZY_CODEDECEPTION__LOGIN: ${{ secrets.ZY_CODEDECEPTION__LOGIN }}
+        ZY_CODEDECEPTION__PASSWORD: ${{ secrets.ZY_CODEDECEPTION__PASSWORD }}
+      run: |
+            cd ZygorDownloader
+            dotnet run --configuration Release
+      timeout-minutes: 15
