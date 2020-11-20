@@ -31,14 +31,14 @@ namespace ZygorDownloader.Browser.Codedeception
 
         private static Uri ExtractZygorLink(string source)
         {
-            var retailRegex = new Regex(@"Zygor\s+Retail\s+(7|8|9)\.\d+\.\d+.*?""\s*(https:\/\/.*mega.nz.*?)\s*""", RegexOptions.IgnoreCase);
+            var retailRegex = new Regex(@"Zygor\s+Retail\s+\|\s+.+?""\s*(https:\/\/.*mega.nz.*?)\s*""", RegexOptions.IgnoreCase);
             var m = retailRegex.Match(source);
             if (!m.Success)
             {
                 throw new Exception("Unable to find latest zygor retail link");
             }
 
-            var url = m.Groups[2].Value;
+            var url = m.Groups[1].Value;
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 throw new Exception("The latest zygor retail link is not valid");
@@ -49,14 +49,14 @@ namespace ZygorDownloader.Browser.Codedeception
         
         private static Uri ExtractZygorClassicLink(string source)
         {
-            var classicRegex = new Regex(@"Zygor\s+Classic\s+(1|2|3)\.\d+\.\d+.*?""\s*(https:\/\/.*mega.nz.*?)\s*""", RegexOptions.IgnoreCase);
+            var classicRegex = new Regex(@"Zygor\s+Classic\s+\|\s+.+?""\s*(https:\/\/.*?mega.nz.*?)\s*""", RegexOptions.IgnoreCase);
             var m = classicRegex.Match(source);
             if (!m.Success)
             {
                 throw new Exception("Unable to find latest zygor classic link");
             }
 
-            var url = m.Groups[2].Value;
+            var url = m.Groups[1].Value;
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 throw new Exception("The latest zygor classic link is not valid");
