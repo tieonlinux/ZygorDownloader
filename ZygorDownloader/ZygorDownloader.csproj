@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Glob" Version="1.1.8" />
-      <PackageReference Include="MegaApiClient" Version="1.8.2" />
+      <PackageReference Include="MegaApiClient" Version="1.10.2" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
       <PackageReference Include="MoonSharp" Version="2.0.0" />
