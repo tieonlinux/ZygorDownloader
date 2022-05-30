@@ -13,7 +13,7 @@
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
       <PackageReference Include="MoonSharp" Version="2.0.0" />
       <PackageReference Include="Selenium.WebDriver" Version="3.141.0" />
-      <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="86.0.4240.2200" />
+      <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="102.0.5005.6102" />
       <PackageReference Include="Serilog" Version="2.10.0" />
       <PackageReference Include="Serilog.Exceptions" Version="5.6.0" />
       <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
